@@ -1168,5 +1168,75 @@
         startWaveAnimation();
         loadSurah();
     </script>
+    <script>
+// منع الصفحة البيضاء في التطبيق المثبت - PLAYER
+(function() {
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    
+    if (isPWA) {
+        console.log('يعمل كتطبيق مثبت - المشغل');
+        
+        // التأكد من تحميل الأيقونات
+        if (!document.querySelector('link[href*="font-awesome"]')) {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css';
+            document.head.appendChild(link);
+        }
+        
+        // التأكد من تحميل الصور
+        const coverImg = document.getElementById('coverImg');
+        if (coverImg && !coverImg.complete) {
+            coverImg.onerror = () => {
+                coverImg.src = 'icon-192.png';
+            };
+        }
+        
+        // إذا كانت الصفحة فارغة -> إعادة تحميل
+        if (document.body.innerText.trim() === '' || document.body.children.length < 4) {
+            console.log('صفحة فارغة في المشغل، إعادة تحميل...');
+            window.location.reload();
+        }
+    }
+})();
+
+// تسجيل Service Worker جديد
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+        console.log('Service Worker مسجل - player');
+        reg.onupdatefound = () => {
+            const newWorker = reg.installing;
+            if (newWorker) {
+                newWorker.onstatechange = () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        console.log('تحديث جاهز في المشغل');
+                        setTimeout(() => {
+                            if (confirm('يوجد تحديث جديد. هل تريد إعادة التحميل؟')) {
+                                window.location.reload();
+                            }
+                        }, 1000);
+                    }
+                };
+            }
+        };
+    }).catch(err => console.log('خطأ في التسجيل:', err));
+}
+
+// حفظ وقت الاستماع قبل إغلاق الصفحة
+window.addEventListener('beforeunload', () => {
+    const audio = document.getElementById('audio');
+    const currentSurahIndex = localStorage.getItem('currentSurahIndex');
+    if (audio && !audio.paused && audio.currentTime && currentSurahIndex) {
+        localStorage.setItem(`surah_${currentSurahIndex}_time`, audio.currentTime);
+    }
+});
+
+// استعادة مستوى الصوت
+const savedVolume = localStorage.getItem('playerVolume');
+if (savedVolume !== null && document.getElementById('audio')) {
+    const audio = document.getElementById('audio');
+    audio.volume = parseFloat(savedVolume);
+}
+</script>
 </body>
 </html>
