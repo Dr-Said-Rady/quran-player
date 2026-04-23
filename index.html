@@ -756,5 +756,46 @@
             }
         });
     </script>
+    <script>
+// منع الصفحة البيضاء في التطبيق المثبت
+(function() {
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    
+    if (isPWA) {
+        console.log('يعمل كتطبيق مثبت');
+        
+        // التأكد من تحميل الأيقونات
+        if (!document.querySelector('link[href*="font-awesome"]')) {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css';
+            document.head.appendChild(link);
+        }
+        
+        // إذا كانت الصفحة فارغة -> إعادة تحميل
+        if (document.body.innerText.trim() === '' || document.body.children.length < 2) {
+            console.log('صفحة فارغة، إعادة تحميل...');
+            window.location.reload();
+        }
+    }
+})();
+
+// تسجيل Service Worker جديد
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+        console.log('Service Worker مسجل');
+        reg.onupdatefound = () => {
+            const newWorker = reg.installing;
+            newWorker.onstatechange = () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('تحديث جاهز');
+                    // إعادة تحميل لتطبيق التحديث
+                    window.location.reload();
+                }
+            };
+        };
+    }).catch(err => console.log('خطأ في التسجيل:', err));
+}
+</script>
 </body>
 </html>
